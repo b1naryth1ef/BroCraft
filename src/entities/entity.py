@@ -14,6 +14,9 @@ class Entity(object):
     velo = Velocity()
     rotation = Rotation()
 
+    def getChunk(self):
+        return (int(self.pos.x >> 4), int(self.pos.z) >> 4)
+
     def loadFromNbt(self, nbt):
         self.tag = nbt
         self.pos.loadFromNbt(nbt['Pos'])

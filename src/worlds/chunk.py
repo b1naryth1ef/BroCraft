@@ -60,3 +60,8 @@ class Chunk(object):
             for ent in self.world.em.getEntsInChunk(*self.pos):
                 self.c.Entities.append(ent.saveToNbt())
         self.c.dirty = True
+
+    def suggestUnload(self):
+        if len([i for i in self.world.game.players.values() if i.entity.getChunk() == self.pos]):
+            print "Unloading for lack of players!"
+            self.unload()
