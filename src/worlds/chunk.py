@@ -12,12 +12,13 @@ class Chunk(object):
         self.c = real
         #self.em = EntityManager(self)
         self.readonly = False
-        self.changed = False
         self.rem = []
         self.load()
 
     def getPacket(self): #HOW DOES THIS WORK? IDK BUT YOLO
         inf = []
+
+        if self.c.dirty: self.world.level.generateLights()
 
         for y in range(0, 256, 16):
             Blocks = self.c.Blocks[..., y:y + 16].swapaxes(0, 2)
@@ -59,7 +60,7 @@ class Chunk(object):
             print "Chunk %s, %s unloading all entities" % self.pos
             for ent in self.world.em.getEntsInChunk(*self.pos):
                 self.c.Entities.append(ent.saveToNbt())
-        self.c.dirty = True
+            self.c.dirty = True
 
     def suggestUnload(self):
         if len([i for i in self.world.game.players.values() if i.entity.getChunk() == self.pos]):

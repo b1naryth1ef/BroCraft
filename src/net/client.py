@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from twisted.internet import protocol
-from proto.packets import PACKETS, Packet
+from proto.packets import PACKETS, Packet, PacketBase, parse_packets
 from player import Player
 import time
 
@@ -14,11 +14,12 @@ class Client(protocol.Protocol):
         self.server = self.game.server
         self.player = None
         self.last_pak = 0
+        self.buffer = ""
 
     def authenticate(self): pass #Figure this out later
 
     def write(self, pak):
-        if isinstance(pak, Packet):
+        if isinstance(pak, PacketBase):
             pak = pak.build()
         self.transport.write(pak)
 
@@ -31,15 +32,17 @@ class Client(protocol.Protocol):
             self.write(kp)
             self.transport.loseConnection()
 
-    def parse(self, data):
-        if data[0] in PACKETS.keys():
-            p = Packet(struct=data[0]).read(data[1:])
-        elif data[0] != '\n':
-            print "Unimplemented Packet: %s" % repr(data[0])
-            return
-        else: return
+    def parse(self, data): #Totes not like bravo :3
+        self.buffer += data
+        paks, self.buffer = parse_packets(self.buffer)
 
-        print "Parsing packet '%s'..." % p.name
+        for i in paks:
+            p = Packet(struct=i[0]).read(i[1])
+            self.parseOne(p)
+
+    def parseOne(self, p):
+        if p.name not in ['grounded', 'position']:
+            print "Parsing packet '%s'..." % p.name
         self.last_pak = time.time()
         if p.name == "ping" and self.player:
             self.player.ping(p)
@@ -63,15 +66,22 @@ class Client(protocol.Protocol):
                 len(self.game.players),
                 self.server.max_players))
 
-        if p.name == "dc":
-            self.connectionLost("quit")
+        if p.name == "dc": self.connectionLost("quit")
 
-        if p.name == "location": pass
-        if p.name == "orientation": pass
-        if p.name == "position": self.player.entity.pos.update([p.x, p.y, p.z]) #@TODO Check validity
+        #Blocks/Modify
+        if p.name == "digging": self.player.dig(p)
+
+        #Movement
+        if p.name == "location":
+            self.player.lookChange(p)
+            self.player.locationChange(p)
+        if p.name == "orientation":
+            self.player.lookChange(p)
+        if p.name == "position":
+            self.player.locationChange(p)
+
         if p.name == "chat":
-            if p.message.startswith("/"):
-                return self.player.parseCommand(p.message)
+            if p.message.startswith("/"): return self.player.parseCommand(p.message)
             if p.message.startswith("@"): pass
             self.game.broadcastMsg("<{yellow}%s{reset}>: %s" % (self.player.username, p.message))
 

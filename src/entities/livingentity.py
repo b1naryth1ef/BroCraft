@@ -1,5 +1,6 @@
 from entities.entity import Entity
 from pymclevel.nbt import *
+from util.nbtutil import Tag
 
 class LivingEntity(Entity):
     max_health = 0
@@ -56,20 +57,19 @@ class PlayerEntity(LivingEntity):
     def loadFromNbt(self, nbt):
         LivingEntity.loadFromNbt(self, nbt)
 
-        self.dim = nbt['Dimension'].value
-        self.gametype = nbt['playerGameType'].value
-        self.score = nbt['Score'].value
-        self.slot = nbt['SelectedItemSlot'].value
-        if 'SpawnX' in nbt:
-            self.spawn = (nbt['SpawnX'].value, nbt['SpawnY'].value, nbt['SpawnZ'].value)
+        self.dim = Tag("Dimension", TAG_Int, 0)
+        self.gametype = Tag("playerGameType", TAG_Int, 0)
+        self.score = Tag("Score", TAG_Int, 0)
+        self.slot = Tag("SelectedItemSlot", TAG_Int, 9)
+        self.foodLevel = Tag("foodLevel", TAG_Int, 0)
+        self.foodExhaustionLevel = Tag("foodExhaustionLevel", TAG_Float, 0)
+        self.foodSaturationLevel = Tag("foodSaturationLevel", TAG_Float, 0)
+        self.foodTickTimer = Tag("foodTickTimer", TAG_Int, 0)
+        self.xpLevel = Tag("XpLevel", TAG_Int, 0)
+        self.xpPercent = Tag("XpP", TAG_Float, 0)
+        self.xpTotal = Tag("XpTotal", TAG_Int, 0)
+        if 'SpawnX' in nbt: self.spawn = (nbt['SpawnX'].value, nbt['SpawnY'].value, nbt['SpawnZ'].value)
         else: self.spawn = None
-        self.foodLevel = nbt['foodLevel'].value
-        self.foodExhaustionLevel = nbt['foodExhaustionLevel'].value
-        self.foodSaturationLevel = nbt['foodSaturationLevel'].value
-        self.foodTickTimer = nbt['foodTickTimer'].value
-        self.xpLevel = nbt['XpLevel'].value
-        self.xpPercent = nbt['XpP'].value
-        self.xpTotal = nbt['XpTotal'].value
         #@TODO inventories & abilities
 
         return self
@@ -77,21 +77,10 @@ class PlayerEntity(LivingEntity):
     def saveToNbt(self, nbt):
         LivingEntity.saveToNbt(self, nbt)
 
-        nbt['Dimension'] = TAG_Int(self.dim)
-        nbt['playerGameType'] = TAG_Int(self.gametype)
-        nbt['Score'] = TAG_Int(self.score)
-        nbt['SelectedItemSlot'] = TAG_Int(self.slot)
         if self.spawn:
             nbt['SpawnX'] = TAG_Int(self.spawn[0])
             nbt['SpawnY'] = TAG_Int(self.spawn[1])
             nbt['SpawnZ'] = TAG_Int(self.spawn[2])
-        nbt['foodLevel'] = TAG_Int(self.foodLevel)
-        nbt['foodExhaustionLevel'] = TAG_Float(self.foodExhaustionLevel)
-        nbt['foodSaturationLevel'] = TAG_Float(self.foodSaturationLevel)
-        nbt['foodTickTimer'] = TAG_Int(self.foodTickTimer)
-        nbt['XpLevel'] = TAG_Int(self.xpLevel)
-        nbt['XpP'] = TAG_Float(self.xpPercent)
-        nbt['XpTotal'] = TAG_Int(self.xpTotal)
 
         return self.tag
 

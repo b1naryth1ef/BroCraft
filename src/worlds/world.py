@@ -2,10 +2,13 @@ from pymclevel import mclevel
 from pymclevel.mclevelbase import ChunkNotPresent
 from entities.manager import EntityManager
 from entities.livingentity import PlayerEntity
+from proto.packets import Packet
+from util.pos import getXYZ
 from worlds.chunk import Chunk
 
 class World(object):
-    def __init__(self, wid, path, name="world"):
+    def __init__(self, game, wid, path, name="world"):
+        self.game = game
         self.id = wid
         self.name = name
         self.path = path
@@ -24,10 +27,20 @@ class World(object):
         self.time = None
         self.gametype = None
 
+    def getBlock(self, *args):
+        return self.level.blockAt(getXYZ(args))
+
+    def modifyBlock(self, to, *args):
+        x, y, z = getXYZ(args)
+        self.level.setBlockAt(x, y, z, to)
+        self.game.broadcast(Packet("block", x=x, y=y, z=z, type=to, meta=0))
+
     def loadPlayer(self, name):
         if name not in self.level.players:
             self.level.createPlayer(name)
-        return PlayerEntity().loadFromNbt(self.level.getPlayerTag(name))
+        ent = PlayerEntity().loadFromNbt(self.level.getPlayerTag(name))
+        self.em.addEnt(ent)
+        return ent
 
     def getChunkAt(self, x, z, force=True):
         if (x, z) not in self.loaded_chunks:
@@ -49,9 +62,9 @@ class World(object):
     def load(self):
         self.level = mclevel.fromFile(self.path)
 
-        self.spawnX = 0#self.level.root_tag['Data']['SpawnX'].value
-        self.spawnY = 64#self.level.root_tag['Data']['SpawnY'].value
-        self.spawnZ = 0#self.level.root_tag['Data']['SpawnZ'].value
+        self.spawnX = 0 #self.level.root_tag['Data']['SpawnX'].value
+        self.spawnY = 64 #self.level.root_tag['Data']['SpawnY'].value
+        self.spawnZ = 0 #self.level.root_tag['Data']['SpawnZ'].value
 
         self.age = self.level.root_tag['Data']['Time'].value
         self.time = self.level.root_tag['Data']['DayTime'].value
@@ -64,14 +77,15 @@ class World(object):
             for _Z in range(scZ-5, scZ+5):
                 self.loadChunk(_X, _Z)
 
-        print "Relighting world..."
-        self.level.generateLights()
         print "Loaded %s chunks!" % len(self.loaded_chunks)
         self.loaded = True
 
     def unload(self):
+        print "Unloading all chunks..."
         for chunk in self.loaded_chunks.values():
             chunk.unload()
+        print "Relighting all chunks..."
+        self.level.generateLights()
         print "Saving..."
         self.level.saveInPlace()
         self.level.close()
