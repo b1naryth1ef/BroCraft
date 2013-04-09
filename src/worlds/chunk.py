@@ -42,6 +42,7 @@ class Chunk(object):
     def load(self, relight=False):
         print "Chunk %s loading all entities (%s)" % (str(self.pos), len(self.c.Entities))
         for ent in self.c.Entities:
+            if 'id' not in ent: continue
             if ent['id'].value in LIVING_ENTITIES.keys():
                 e = LIVING_ENTITIES[ent['id'].value]().loadFromNbt(ent)
                 self.world.em.addEnt(e)

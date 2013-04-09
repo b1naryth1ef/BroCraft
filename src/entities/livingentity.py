@@ -76,8 +76,8 @@ class PlayerEntity(LivingEntity):
 
         return self
 
-    def saveToNbt(self, nbt):
-        LivingEntity.saveToNbt(self, nbt)
+    def saveToNbt(self):
+        LivingEntity.saveToNbt(self)
 
         if self.spawn:
             nbt['SpawnX'] = TAG_Int(self.spawn[0])

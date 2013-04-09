@@ -72,13 +72,12 @@ class Client(protocol.Protocol):
         if p.name == "digging": self.player.dig(p)
 
         #Movement
-        if p.name == "location":
+        if p.name == "orientation" or p.name == "location":
             self.player.lookChange(p)
-            self.player.locationChange(p)
-        if p.name == "orientation":
-            self.player.lookChange(p)
-        if p.name == "position":
-            self.player.locationChange(p)
+            self.player.groundChange(p)
+        if p.name == "position" or p.name == "location":
+            self.player.positionChange(p)
+            self.player.groundChange(p)
 
         if p.name == "chat":
             if p.message.startswith("/"): return self.player.parseCommand(p.message)

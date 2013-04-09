@@ -28,7 +28,7 @@ class World(object):
         self.gametype = None
 
     def getBlock(self, *args):
-        return self.level.blockAt(getXYZ(args))
+        return self.level.blockAt(*getXYZ(args))
 
     def modifyBlock(self, to, *args):
         x, y, z = getXYZ(args)

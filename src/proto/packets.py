@@ -42,7 +42,7 @@ PACKETS = {
     32: Struct("entity-orientation", UBInt32("eid"), UBInt8("yaw"), UBInt8("pitch")),
     33: Struct("entity-location", UBInt32("eid"), SBInt8("dx"), SBInt8("dy"), SBInt8("dz"), UBInt8("yaw"), UBInt8("pitch")),
     34: Struct("teleport", UBInt32("eid"), SBInt32("x"), SBInt32("y"), SBInt32("z"), UBInt8("yaw"), UBInt8("pitch")),
-    35: Struct("entity-head", UBInt32("eid"), UBInt8("yaw"),),
+    35: Struct("entity-head", UBInt32("eid"), UBInt8("yaw")),
     38: Struct("status", UBInt32("eid"), status),
     39: Struct("attach", UBInt32("eid"), UBInt32("vid")),
     40: Struct("metadata", UBInt32("eid"), metadata),

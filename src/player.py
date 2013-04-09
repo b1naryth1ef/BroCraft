@@ -15,6 +15,9 @@ class Player(object):
         self.entity = self.world.loadPlayer(self.username)
         self.loaded_chunks = []
 
+        #Etc
+        self.onGround = False
+
         #Ping/etc
         self.last_ping = 0
         self.ping_key = 0
@@ -39,8 +42,20 @@ class Player(object):
         self.world.modifyBlock(0, loc)
 
     # Packet Parsing
-    def locationChange(self, pak): pass
-    def lookChange(self, pak): pass
+    def positionChange(self, pak):
+
+        self.pos.x = pak.x
+        self.pos.y = pak.y
+        self.pos.z = pak.z
+        self.game.broadcast(self.getTeleportPak(), [self])
+
+    def lookChange(self, pak):
+        self.pos.fromDegs(pak.yaw, pak.pitch)
+        self.game.broadcast(self.getTeleportPak(), [self])
+        pk = Packet("entity-head", eid=self.entity.id, yaw=self.pos.toFracs()[0])
+        self.game.broadcast(pk, [self])
+
+    def groundChange(self, pak): self.onGround = bool(pak.grounded)
 
     def dig(self, pak):
         loc = Location(pak.x, pak.y, pak.z)
@@ -58,11 +73,16 @@ class Player(object):
     def kick(self, msg):
         self.client.write(Packet("dc", message=msg))
 
+    def getTeleportPak(self):
+        pk = Packet("teleport", eid=self.entity.id, x=self.pos.bx, y=self.pos.by, z=self.pos.bz)
+        pk.yaw, pk.pitch = self.pos.toFracs()
+        return pk
+
     def getLocPak(self):
         pk = Packet("location")
         self.pos.modifyPacket(pk)
         pk.stance = self.pos.y+1.62
-        pk.grounded = 1
+        pk.grounded = self.onGround
         return pk
 
     def ping(self, pk):

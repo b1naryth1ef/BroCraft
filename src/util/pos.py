@@ -1,11 +1,11 @@
 from pymclevel.nbt import *
 from proto.packets import Packet
-import math
+from math import atan2, cos, degrees, radians, pi, sin, sqrt
 
 def getXYZ(args):
     if len(args) == 1: x, y, z = args[0].get()
     else: x, y, z = args
-    return x, y, z
+    return int(x), int(y), int(z)
 
 class Position(object):
     kargs = ["x", "y", "z", "yaw", "pitch", "vx", "vy", "vz"]
@@ -25,8 +25,7 @@ class Position(object):
         pk.x = self.x*32
         pk.y = self.y*32
         pk.z = self.z*32
-        pk.yaw = 0 #int(self.yaw)
-        pk.pitch = 0 #int(self.pitch)
+        pk.yaw, pk.pitch = self.toFracs()
         return pk
 
     @property
@@ -56,7 +55,7 @@ class Position(object):
     def toOrientation(self):
         return Orientation(self.yaw, self.pitch)
 
-    def toVelocity(self, v):
+    def toVelocity(self):
         return Velocity(self.vx, self.vy, self.vz)
 
     def modifyPacket(self, p, velo=False, block=False):
@@ -65,6 +64,23 @@ class Position(object):
         else: [setattr(p, i, getattr(self, i)) for i in k]
         [setattr(p, i, getattr(self, i)) for i in self.kargs if len(i) > 2]
         return p
+
+    def change(self, k, val):
+        self.__dict__[k] += val
+        return self
+
+    def fromDegs(self, yaw, pitch):
+        self.yaw = radians(yaw) % (pi * 2)
+        self.pitch = radians(pitch)
+
+    def toDegs(self):
+        return int(round(degrees(self.yaw))), int(round(degrees(self.pitch)))
+
+    def toFracs(self):
+        yaw = int(self.yaw * 255 / (2 * pi)) % 256
+        pitch = int(self.pitch * 255 / (2 * pi)) % 256
+        return yaw, pitch
+
 
 class PlayerPosition(Position):
     kargs = ["x", "y", "z", "yaw", "pitch", "vx", "vy", "vz", "stance", "grounded"]
@@ -98,15 +114,24 @@ class Locatable(object):
             res.append(getattr(self, k))
         return res
 
+    def fromPacket(self, pk):
+        for k in self.key:
+            setattr(self, k, getattr(pk, k))
+        return self
+
 class Location(Locatable):
     key = ['x', 'y', 'z']
+
+    def getRel(self, other):
+        x, y, z = self.x-other.x, self.y-other.y, self.z-other.z
+        return x, y, z
 
     def getChunk(self): return int(self.x) >> 4, int(self.z) >> 4
     def __sub__(self, other): # euclidean distance
         x = ((self.x-other.x)**2)
         y = ((self.y-other.y)**2)
         z = ((self.z-other.z)**2)
-        return math.sqrt(x+y+z)
+        return sqrt(x+y+z)
 
     def __repr__(self):
         return "<Location (%s, %s, %s)>" % self.get()
