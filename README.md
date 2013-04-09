@@ -11,3 +11,8 @@ Intended features:
 - Mod API
 - Efficient world/chunk loading/sending
 - 100% accuracy to the notch-server
+
+## Suckless
+Stuff we've fixed, patched or otherwise improved on versus the notchian server
+
+- Send less ping packets

@@ -59,7 +59,6 @@ modes = {
 }
 mode = Enum(UBInt8("mode"), **modes)
 
-grounded = Struct("grounded", UBInt8("grounded"))
 position = Struct(
     "position",
     BFloat64("x"),

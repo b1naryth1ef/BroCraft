@@ -1,7 +1,7 @@
 from proto.packets import Packet
-from proto.util import grounded, position, orientation
+#from proto.util import grounded, position, orientation
 from util.pos import Location
-from entities.livingentity import PlayerEntity
+#from entities.livingentity import PlayerEntity
 from construct import * #@TEMP
 import random, time
 
@@ -13,15 +13,14 @@ class Player(object):
         self.server = self.game.server
         self.world = self.game.wm.get(0) #Seems dirty
         self.entity = self.world.loadPlayer(self.username)
-
-        self.game.playerJoin(self)
-        #self.game.players[self.username] = self
-
         self.loaded_chunks = []
 
         #Ping/etc
         self.last_ping = 0
         self.ping_key = 0
+
+        #Tick-tracking
+        self.callhalf = 0
 
         #Block Digging
         self.digging = None
@@ -42,6 +41,7 @@ class Player(object):
     # Packet Parsing
     def locationChange(self, pak): pass
     def lookChange(self, pak): pass
+
     def dig(self, pak):
         loc = Location(pak.x, pak.y, pak.z)
         if pak.state == 'started':
@@ -58,12 +58,10 @@ class Player(object):
     def kick(self, msg):
         self.client.write(Packet("dc", message=msg))
 
-    def getLocPak(self): #@TEMP
+    def getLocPak(self):
         pk = Packet("location")
-        pk.x, pk.y, pk.z = self.entity.pos.asList()
-        pk.stance = 0
-        pk.rotation = 1.0
-        pk.pitch = 1.0
+        self.pos.modifyPacket(pk)
+        pk.stance = self.pos.y+1.62
         pk.grounded = 1
         return pk
 
@@ -75,17 +73,19 @@ class Player(object):
         self.last_ping += 1
         if self.last_ping == 500:
             self.ping_key = random.randint(1, 100)
-            self.client.write(Packet("ping", pid=self.ping_key)) #@TODO pid
+            self.client.write(Packet("ping", pid=self.ping_key))
         elif self.last_ping > 1000:
             self.kick("Timed out!")
+
+    def tick10(self): #Player List
+        self.game.broadcast(Packet("players", username=self.username, online=True, ping=0)) #@TODO ping
 
     def loadChunk(self, x, z):
         c = self.game.wm.get(0).getChunkAt(x, z, force=True)
         if c:
             self.client.write(c.getPacket())
             self.loaded_chunks.append((x, z))
-        else:
-            print "DERP"
+        else: self.kick("Could not load chunks. <3")
 
     def login(self):
         self.entity.pos.x = 0
@@ -101,6 +101,8 @@ class Player(object):
         pk.unused = 0
         pk.maxplayers = self.server.max_players
         self.client.write(pk)
+
+        self.game.playerJoin(self)
 
         #Load Chunks in a 20x20 around the player
         x, z = self.entity.getChunk()

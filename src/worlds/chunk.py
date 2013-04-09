@@ -10,12 +10,9 @@ class Chunk(object):
         self.world = world
         self.pos = pos
         self.c = real
-        #self.em = EntityManager(self)
-        self.readonly = False
-        self.rem = []
         self.load()
 
-    def getPacket(self): #HOW DOES THIS WORK? IDK BUT YOLO
+    def getPacket(self): #@TODO Support section-packets to save bandwith?
         inf = []
 
         if self.c.dirty: self.world.level.generateLights()
@@ -42,25 +39,20 @@ class Chunk(object):
         p.data = "".join(inf)
         return p
 
-    def load(self):
+    def load(self, relight=False):
         print "Chunk %s loading all entities (%s)" % (str(self.pos), len(self.c.Entities))
         for ent in self.c.Entities:
             if ent['id'].value in LIVING_ENTITIES.keys():
-                self.rem.append(ent)
                 e = LIVING_ENTITIES[ent['id'].value]().loadFromNbt(ent)
                 self.world.em.addEnt(e)
 
-        for r in self.rem:
-            self.c.Entities.remove(r)
-
-        #self.c.needsLighting = True #@TODO have an option to relight chunks
+        if relight: self.c.needsLighting = True
 
     def unload(self):
-        if not self.readonly:
-            print "Chunk %s, %s unloading all entities" % self.pos
-            for ent in self.world.em.getEntsInChunk(*self.pos):
-                self.c.Entities.append(ent.saveToNbt())
-            self.c.dirty = True
+        print "Chunk %s, %s unloading all entities" % self.pos
+        for ent in self.world.em.getEntsInChunk(*self.pos):
+            self.c.Entities.append(ent.saveToNbt())
+        self.c.dirty = True
 
     def suggestUnload(self):
         if len([i for i in self.world.game.players.values() if i.entity.getChunk() == self.pos]):

@@ -18,10 +18,10 @@ PACKETS = {
     7: Struct("use", UBInt32("eid"), UBInt32("target"), UBInt8("button")),
     8: Struct("health", UBInt16("hp"), UBInt16("fp"), BFloat32("saturation")),
     9: Struct("respawn", dimension, difficulty, mode, UBInt16("height"), AlphaString("leveltype")),
-    10: grounded,
-    13: Struct("location", BFloat64("x"), BFloat64("y"), BFloat64("stance"), BFloat64("z"), BFloat32("rotation"), BFloat32("pitch"), UBInt8("grounded")),
+    10: Struct("grounded", UBInt8("grounded")),
+    13: Struct("location", BFloat64("x"), BFloat64("y"), BFloat64("stance"), BFloat64("z"), BFloat32("yaw"), BFloat32("pitch"), UBInt8("grounded")),
     11: Struct("position", BFloat64("x"), BFloat64("y"), BFloat64("stance"), BFloat64("z"), UBInt8("grounded")),
-    12: Struct("orientation", BFloat32("rotation"), BFloat32("pitch"), UBInt8("grounded")),
+    12: Struct("orientation", BFloat32("yaw"), BFloat32("pitch"), UBInt8("grounded")),
     14: Struct("digging", dig_state, SBInt32("x"), UBInt8("y"), SBInt32("z"), face),
     15: Struct("build", SBInt32("x"), UBInt8("y"), SBInt32("z"), face, Embed(items), UBInt8("cursorx"), UBInt8("cursory"), UBInt8("cursorz")),
     16: Struct("equip", UBInt16("slot")),
@@ -73,7 +73,7 @@ PACKETS = {
     131: Struct("map", UBInt16("type"), UBInt16("itemid"), PascalString("data", length_field=UBInt8("length"))),
     132: Struct("tile-update", SBInt32("x"), UBInt16("y"), SBInt32("z"), UBInt8("action")),
     200: Struct("statistics", UBInt32("sid"), UBInt8("count")),
-    201: Struct("players", AlphaString("name"), Bool("online"), UBInt16("ping")),
+    201: Struct("players", AlphaString("username"), Bool("online"), UBInt16("ping")),
     202: Struct("abilities", UBInt8("flags"), UBInt8("fly-speed"), UBInt8("walk-speed")),
     203: Struct("tab", AlphaString("autocomplete")),
     204: Struct("settings", AlphaString("locale"), UBInt8("distance"), UBInt8("chat"), difficulty, Bool("cape")),
@@ -95,12 +95,14 @@ class Packet(PacketBase):
         self._struct = PACKETS[struct]
         self._id = struct
         self.name = self._struct.name
-
+        self._pak = None
         self.__dict__.update(kwargs)
 
     def build(self, **kwargs):
+        if self._pak and not kwargs.get("force"): return self._pak
         self.__dict__.update(kwargs)
-        return chr(self._id)+self._struct.build(self)
+        self._pak = chr(self._id)+self._struct.build(self)
+        return self._pak
 
     def read(self, data):
         #self._data = self._struct.parse(data)

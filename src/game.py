@@ -4,7 +4,7 @@ from worlds.world import World
 from proto.packets import Packet, CombPacket
 from util.color import colorize
 
-import time, thread, random
+import time, thread
 
 class Game(object):
     def __init__(self):
@@ -15,10 +15,19 @@ class Game(object):
         self.wm = WorldManager(w)
 
         self.running = False
+        self.call10 = 0
 
     def tickLoop(self):
         while self.running:
             time.sleep(0.05)
+
+            #Call10
+            self.call10 += 1
+            if self.call10 > 10:
+                self.call10 = 0
+                for plyr in self.players.values():
+                    plyr.tick10()
+
             for plyr in self.players.values():
                 plyr.tick()
 
@@ -33,18 +42,19 @@ class Game(object):
         self.wm.unload()
         print "Done!"
 
-    def broadcast(self, pak):
+    def broadcast(self, pak, ignore=[]):
         for p in self.players.values():
+            if p in ignore: continue
             p.client.write(pak)
 
     def broadcastMsg(self, msg):
         self.broadcast(Packet("chat", message=colorize(msg)))
 
     def playerJoin(self, p):
+        self.broadcast(Packet("players", username=p.username, online=True, ping=0))
         if len(self.players):
-            pk1 = Packet("create", eid=p.entity.id)
-            pk2 = Packet("player", eid=p.entity.id, username=p.username, x=int(p.pos.x), y=int(p.pos.y), z=int(p.pos.z), yaw=0, pitch=0, item=0, metadata={})
-            self.broadcast(CombPacket(pk1, pk2))
+            pk = Packet("player", eid=p.entity.id, username=p.username, x=p.pos.bx, y=p.pos.by, z=p.pos.bz, yaw=0, pitch=0, item=0, metadata={})
+            self.broadcast(pk, ignore=[p])
         self.players[p.username] = p
         self.broadcastMsg("{yellow}%s joined the game" % p.username)
 

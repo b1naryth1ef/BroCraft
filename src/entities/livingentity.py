@@ -1,5 +1,6 @@
 from entities.entity import Entity
 from pymclevel.nbt import *
+from util.pos import PlayerPosition
 from util.nbtutil import Tag
 
 class LivingEntity(Entity):
@@ -53,6 +54,7 @@ class Chicken(Breedable):
 class PlayerEntity(LivingEntity):
     max_health = 16
     tagid = "Player"
+    pos = PlayerPosition()
 
     def loadFromNbt(self, nbt):
         LivingEntity.loadFromNbt(self, nbt)
