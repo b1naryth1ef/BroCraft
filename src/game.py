@@ -3,33 +3,45 @@ from worlds.manager import WorldManager
 from worlds.world import World
 from proto.packets import Packet, CombPacket
 from util.color import colorize
-
+from util.ticks import Ticker
 import time, thread
 
 class Game(object):
     def __init__(self):
         self.server = Server(self)
         self.players = {}
+        self.ticks = []
+
+        self.tick = 0
+        self.max_ticks = 50000000 # Random number ftw
 
         w = World(self, 0, "/home/andrei/.minecraft/saves/world/level.dat")
         self.wm = WorldManager(w)
 
         self.running = False
-        self.call10 = 0
+        self.callTen = self.addTick(Ticker(self.call10, 10, True))
+
+    def addTick(self, t):
+        self.ticks.append(t)
+        t._add(self)
+        return t
+
+    def rmvTick(self, t):
+        if t in self.ticks: self.ticks.remove(t)
+
+    def call10(self):
+        for plyr in self.players.values():
+            plyr.tick10()
 
     def tickLoop(self):
         while self.running:
             time.sleep(0.05)
-
-            #Call10
-            self.call10 += 1
-            if self.call10 > 10:
-                self.call10 = 0
-                for plyr in self.players.values():
-                    plyr.tick10()
-
+            self.tick += 1
+            if self.tick > self.max_ticks: self.tick = 0
             for plyr in self.players.values():
                 plyr.tick()
+            for t in self.ticks:
+                if t.call_on == self.tick: t.call()
 
     def runGame(self):
         self.running = True

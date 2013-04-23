@@ -4,6 +4,7 @@ from entities.manager import EntityManager
 from entities.livingentity import PlayerEntity
 from proto.packets import Packet
 from util.pos import getXYZ
+from util.ticks import TickWarn
 from worlds.chunk import Chunk
 
 class World(object):
@@ -26,6 +27,8 @@ class World(object):
         self.age = None
         self.time = None
         self.gametype = None
+
+    def getName(self): return self.name
 
     def getBlock(self, *args):
         return self.level.blockAt(*getXYZ(args))
@@ -59,6 +62,11 @@ class World(object):
         self.loaded_chunks[(x, z)] = Chunk(self, (x, z), rc)
         return True
 
+    def loadChunkRange(self, orgx, orgz, x, z):
+        for _X in range(orgx-x, orgx+x):
+            for _Z in range(orgz-z, orgz+z):
+                self.loadChunk(_X, _Z)
+
     def load(self):
         self.level = mclevel.fromFile(self.path)
 
@@ -70,12 +78,8 @@ class World(object):
         self.time = self.level.root_tag['Data']['DayTime'].value
         self.gametype = self.level.root_tag['Data']['GameType'].value
 
-        #Load a 5x5 around spawn
-        scX, scZ = [int(self.spawnX >> 4), int(self.spawnZ >> 4)]
-
-        for _X in range(scX-5, scX+5):
-            for _Z in range(scZ-5, scZ+5):
-                self.loadChunk(_X, _Z)
+        # Load a 5x5 around spawn
+        self.loadChunkRange(int(self.spawnX) >> 4, int(self.spawnZ) >> 4, 5, 5)
 
         print "Loaded %s chunks!" % len(self.loaded_chunks)
         self.loaded = True
@@ -90,4 +94,7 @@ class World(object):
         self.level.saveInPlace()
         self.level.close()
 
-    def tick(self): pass
+    @TickWarn(1, "World Tick")
+    def tick(self):
+        for ent in self.em:
+            ent.tick()

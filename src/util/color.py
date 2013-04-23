@@ -25,5 +25,13 @@ COLORS = {
     "reset": u"§r"
 }
 
+class Colorizer():
+    def __init__(self):
+        for k, v in COLORS.items():
+            self.__dict__[k] = v
+
+    def f(self, s, **kwargs):
+        return s.format(c=self, **kwargs)
+
 def colorize(msg):
     return msg.format(**COLORS)

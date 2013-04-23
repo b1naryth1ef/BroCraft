@@ -24,3 +24,6 @@ class EntityManager(object):
             id = self.generateId()
         self.ents[id] = ent
         ent.id = id
+
+    def __iter__(self):
+        return self.ents.values()

@@ -10,8 +10,9 @@ class Entity(object):
     invulnerable = False
     despawn = False
     age = 0
-    # Objects
+    # Hybrid Classes
     pos = Position()
+
     # Loaders
     loc = Location()
     velo = Velocity()
@@ -27,7 +28,9 @@ class Entity(object):
         self.loc.loadFromNbt(nbt['Pos'])
         self.velo.loadFromNbt(nbt['Motion'])
         self.rotation.loadFromNbt(nbt['Rotation'])
-        self.pos.fromLocation(self.loc).fromVelocity(self.velo).fromOrientation(self.rotation)
+
+        # Load Hybrid Position Holder
+        self.pos.onLoad(self)
 
         # Static Tags
         self.fall_distance = Tag("FallDistance", TAG_Float, 0)
@@ -38,7 +41,4 @@ class Entity(object):
         self.name = Tag("CustomName", TAG_String, "")
 
     def saveToNbt(self):
-        self.tag['Pos'] = self.pos.toLocation().saveToNbt()
-        self.tag['Motion'] = self.pos.toVelocity().saveToNbt()
-        self.tag['Rotation'] = self.pos.toOrientation().saveToNbt()
         return self.tag
