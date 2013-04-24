@@ -88,9 +88,11 @@ class Player(object):
     def getLocPak(self): #@TODO dis r brok again
         pk = Packet("location")
         self.pos.modifyPacket(pk)
+        pk.x = self.pos.x/32.0
+        pk.y = self.pos.y/32.0
+        pk.z = self.pos.z/32.0
         pk.stance = pk.y+1.62
         pk.grounded = self.onGround
-        pk.debug()
         return pk
 
     def ping(self, pk):
@@ -106,7 +108,7 @@ class Player(object):
             self.kick("Timed out!")
 
     def tick10(self): #Player List
-        self.game.broadcast() #@TODO ping
+        self.game.broadcast(Packet("players", username=self.username, online=True, ping=0)) #@TODO ping
 
     def loadChunk(self, x, z):
         c = self.game.wm.get(0).getChunkAt(x, z, force=True)

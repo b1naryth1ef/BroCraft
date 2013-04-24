@@ -41,7 +41,9 @@ class Game(object):
             for plyr in self.players.values():
                 plyr.tick()
             for t in self.ticks:
-                if t.call_on == self.tick: t.call()
+                if t.call_on == self.tick:
+                    try: t.call()
+                    except: print "Exception in a Ticker call!"
 
     def runGame(self):
         self.running = True
