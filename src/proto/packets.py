@@ -31,7 +31,7 @@ PACKETS = {
     20: Struct("player", UBInt32("eid"), AlphaString("username"), SBInt32("x"), SBInt32("y"), SBInt32("z"), UBInt8("yaw"), UBInt8("pitch"), SBInt16("item"), metadata),
     21: Struct("pickup", UBInt32("eid"), Embed(items), SBInt32("x"), SBInt32("y"), SBInt32("z"), UBInt8("yaw"), UBInt8("pitch"), UBInt8("roll")),
     22: Struct("collect", UBInt32("eid"), UBInt32("destination")),
-    23: Struct("spawn", UBInt32("eid"), entity_type, SBInt32("x"), SBInt32("y"), SBInt32("z"), SBInt32("data"), SBInt16("speedx"), SBInt16("speedy"), SBInt16("speedz")),
+    23: Struct("spawn", UBInt32("eid"), entity_type, SBInt32("x"), SBInt32("y"), SBInt32("z"), UBInt8("pitch"), UBInt8("yaw"), SBInt32("data")),
     24: Struct("mob", UBInt32("eid"), mob_type, SBInt32("x"), SBInt32("y"), SBInt32("z"), SBInt8("yaw"), SBInt8("pitch"), SBInt8("head_yaw"), SBInt16("vx"), SBInt16("vy"), SBInt16("vz"), metadata),
     25: Struct("painting", UBInt32("eid"), AlphaString("title"), SBInt32("x"), SBInt32("y"), SBInt32("z"), face),
     26: Struct("experience", UBInt32("eid"), SBInt32("x"), SBInt32("y"), SBInt32("z"), UBInt16("quantity")),

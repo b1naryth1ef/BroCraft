@@ -86,6 +86,7 @@ items = Struct(
 entity_type = Enum( #@TODO embed in Entity class
     UBInt8("type"),
     boat=1,
+    stack=2,
     minecart=10,
     storage_cart=11,
     powered_cart=12,

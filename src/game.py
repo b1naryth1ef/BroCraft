@@ -6,6 +6,10 @@ from util.color import colorize
 from util.ticks import Ticker
 import time, thread
 
+#DEBUG
+from inventory.itemstack import ItemStack
+from inventory.material import mm
+
 class Game(object):
     def __init__(self):
         self.server = Server(self)
@@ -64,6 +68,14 @@ class Game(object):
     def broadcastMsg(self, msg):
         self.broadcast(Packet("chat", message=colorize(msg)))
 
+    def sendNear(self, pak, loc, dist): #@TODO do it
+        count = 0
+        for p in self.players.values():
+            if loc-p.pos.loc < dist:
+                p.client.write(pak)
+                count += 1
+        return bool(count)
+
     def playerJoin(self, p):
         self.broadcast(Packet("players", username=p.username, online=True, ping=0))
         if len(self.players):
@@ -71,6 +83,11 @@ class Game(object):
             self.broadcast(pk, ignore=[p])
         self.players[p.username] = p
         self.broadcastMsg("{yellow}%s joined the game" % p.username)
+
+        #@DEBUG
+        it = ItemStack(mm.DIRT, 64).toEntity()
+        c = self.wm.worlds[0].loaded_chunks[(0, 0)]
+        c.spawnEntity(it)
 
     def playerQuit(self, p):
         del self.players[p.username]

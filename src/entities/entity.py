@@ -1,6 +1,7 @@
 from pymclevel.nbt import *
 from util.pos import Location, Velocity, Orientation, Position
 from util.nbtutil import Tag
+from proto.packets import Packet
 
 class Entity(object):
     id = None
@@ -17,6 +18,12 @@ class Entity(object):
     loc = Location()
     velo = Velocity()
     rotation = Orientation()
+
+    def __init__(self):
+        self.loc = Location(0, 0, 0)
+        self.velo = Velocity(0, 0, 0)
+        self.rotation = Orientation(0, 0)
+        self.pos.onLoad(self)
 
     def getChunk(self):
         return (int(self.pos.x >> 4), int(self.pos.z) >> 4)
@@ -42,3 +49,35 @@ class Entity(object):
 
     def saveToNbt(self):
         return self.tag
+
+class BaseItem(Entity):
+    def loadFromNbt(self, nbt):
+        Entity.loadFromNbt(self, nbt)
+
+        self.health = Tag("Health", TAG_Short, 0)
+        self.age = Tag("Age", TAG_Short, 0)
+
+class Item(BaseItem): #@TDOO "tag" logic for loading extra info
+    entity_type = 2
+    def loadFromNbt(self, nbt):
+        BaseItem.loadFromNbt(self, nbt)
+
+        self.id = Tag('Id', TAG_Short, 1)
+        self.damage = Tag("Damage", TAG_Short, 0)
+        self.count = Tag("Count", TAG_Byte, 0)
+
+        return self
+
+    def getSpawnPacket(self):
+        p = Packet("spawn")
+        p.eid = self.id
+        p.type = self.entity_type
+        p.x = self.loc.x
+        p.y = self.loc.y
+        p.z = self.loc.z
+        p.pitch = self.rotation.pitch
+        p.yaw = self.rotation.yaw
+        p.data = 1 #@DEV what does this do?
+        return p
+
+class XPOrb(BaseItem): pass

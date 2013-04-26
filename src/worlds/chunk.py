@@ -62,3 +62,6 @@ class Chunk(object):
         if len([i for i in self.world.game.players.values() if i.entity.getChunk() == self.pos]):
             print "Unloading for lack of players!"
             self.unload()
+
+    def spawnEntity(self, obj):
+        self.world.game.sendNear(obj.getSpawnPacket(), obj.loc, 150) #@TODO is 150 a valid block dist? check mc soruce
