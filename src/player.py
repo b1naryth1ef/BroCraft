@@ -9,23 +9,24 @@ class Player(object):
     def __init__(self, username, game, client):
         self.client = client
         self.username = username
+        self.dispname = username
         self.game = game
         self.server = self.game.server
         self.world = self.game.wm.get(0) #Seems dirty
         self.entity = self.world.loadPlayer(self.username)
         self.loaded_chunks = []
 
-        #Etc
+        # Etc
         self.onGround = False
 
-        #Ping/etc
+        # Ping/etc
         self.last_ping = 0
         self.ping_key = 0
 
-        #Tick-tracking
+        # Tick-tracking
         self.callhalf = 0
 
-        #Block Digging
+        # Block Digging
         self.digging = None
         self.dig_start = None
 
@@ -34,7 +35,7 @@ class Player(object):
 
     #API stuff
     def canDigBlock(self, loc):
-        if loc-self.entity.pos > 6: return False
+        if loc-self.pos.loc > 6: return False
         return True
 
     def digBlock(self, loc):
@@ -43,19 +44,24 @@ class Player(object):
 
     # Packet Parsing
     def positionChange(self, pak):
-
-        self.pos.x = pak.x
-        self.pos.y = pak.y
-        self.pos.z = pak.z
-        self.game.broadcast(self.getTeleportPak(), [self])
+        #print Location(pak.x, pak.y, pak.z)-self.pos.toLocation()
+        x, y, z = pak.x*32, pak.y*32, pak.z*32
+        dif = (self.pos.x-x, self.pos.y-y, self.pos.z-z)
+        self.pos.x, self.pos.y, self.pos.z = x, y, z
+        pk = Packet("entity-position", dx=dif[0], dy=dif[1], dz=dif[2])
+        self.game.broadcast(pk, [self])
+        #self.game.broadcast(self.getTeleportPak(), [self])
 
     def lookChange(self, pak):
-        self.pos.fromDegs(pak.yaw, pak.pitch)
+        self.pos.ori.fromDegs(pak.yaw, pak.pitch)
         self.game.broadcast(self.getTeleportPak(), [self])
-        pk = Packet("entity-head", eid=self.entity.id, yaw=self.pos.toFracs()[0])
+        pk = Packet("entity-orientation", eid=self.entity.id)
+        pk.yaw, pk.pitch = self.pos.ori.toFracs()
         self.game.broadcast(pk, [self])
+        self.game.broadcast(Packet("entity-head", eid=self.entity.id, yaw=self.pos.ori.toFracs()[0]), [self])
+        #self.game.broadcast(self.getTeleportPak(), [self])
 
-    def groundChange(self, pak): self.onGround = bool(pak.grounded)
+    def groundChange(self, pak): self.onGround = bool(pak.grounded) #@TODO send packet
 
     def dig(self, pak):
         loc = Location(pak.x, pak.y, pak.z)
@@ -74,14 +80,18 @@ class Player(object):
         self.client.write(Packet("dc", message=msg))
 
     def getTeleportPak(self):
-        pk = Packet("teleport", eid=self.entity.id, x=self.pos.bx, y=self.pos.by, z=self.pos.bz)
-        pk.yaw, pk.pitch = self.pos.toFracs()
+        x, y, z = self.pos.loc.toRelative()
+        pk = Packet("teleport", eid=self.entity.id, x=x, y=y, z=z)
+        pk.yaw, pk.pitch = self.pos.ori.toFracs()
         return pk
 
-    def getLocPak(self):
+    def getLocPak(self): #@TODO dis r brok again
         pk = Packet("location")
         self.pos.modifyPacket(pk)
-        pk.stance = self.pos.y+1.62
+        pk.x = self.pos.x/32.0
+        pk.y = self.pos.y/32.0
+        pk.z = self.pos.z/32.0
+        pk.stance = pk.y+1.62
         pk.grounded = self.onGround
         return pk
 
@@ -108,10 +118,12 @@ class Player(object):
         else: self.kick("Could not load chunks. <3")
 
     def login(self):
+        #@DEBUG
         self.entity.pos.x = 0
-        self.entity.pos.y = 64
+        self.entity.pos.y = 2048 #64
         self.entity.pos.z = 0
 
+        # Login Packet
         pk = Packet("login")
         pk.eid = self.entity.id
         pk.leveltype = "default"
@@ -122,23 +134,28 @@ class Player(object):
         pk.maxplayers = self.server.max_players
         self.client.write(pk)
 
+        # Tell the game we have joined
         self.game.playerJoin(self)
 
-        #Load Chunks in a 20x20 around the player
-        x, z = self.entity.getChunk()
-        for cX in range(x-5, x+5):
-            for cZ in range(z-5, z+5):
-                print "Sending player chunk @ %s, %s" % (cX, cZ)
-                self.loadChunk(cX, cZ)
+        # Preload Chunks in a 10x10 around the player
+        self.loadChunkArea(5, 5)
 
-        pk = Packet("compass")
-        if self.entity.spawn:
-            pk.x, pk.y, pk.z = self.entity.spawn
-        else:
-            pk.x, pk.y, pk.z = (0, 64, 0)
+        pk = Packet("compass") #@TODO cleanup
+        if self.entity.spawn: pk.x, pk.y, pk.z = self.entity.spawn
+        else: pk.x, pk.y, pk.z = (0, 64, 0)
         self.client.write(pk)
 
-        self.client.write(self.getLocPak())
+        self.client.write(self.getLocPak()) # Spawn the player in
+
+        # Load a larger area for el playero
+        #self.loadChunkArea(30, 30)
+
+    def loadChunkArea(self, x, z): # Load/Send chunks in a area around the player
+        _x, _z = self.entity.getChunk()
+        for cX in range(_x-x, _x+x):
+            for cZ in range(_z-z, _z+z):
+                print "Sending player chunk @ %s, %s" % (cX, cZ)
+                self.loadChunk(cX, cZ)
 
     def disconnect(self):
         if self.username in self.game.players.keys():

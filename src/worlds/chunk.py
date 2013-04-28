@@ -3,6 +3,7 @@ from entities.livingentity import LIVING_ENTITIES
 from pymclevel.nbt import *
 from pymclevel.infiniteworld import packNibbleArray
 from proto.packets import Packet
+from util.ticks import TickWarn
 from numpy import array
 
 class Chunk(object):
@@ -39,6 +40,7 @@ class Chunk(object):
         p.data = "".join(inf)
         return p
 
+    @TickWarn(5, "Chunk Load")
     def load(self, relight=False):
         print "Chunk %s loading all entities (%s)" % (str(self.pos), len(self.c.Entities))
         for ent in self.c.Entities:
@@ -49,6 +51,7 @@ class Chunk(object):
 
         if relight: self.c.needsLighting = True
 
+    @TickWarn(5, "Chunk Unload")
     def unload(self):
         print "Chunk %s, %s unloading all entities" % self.pos
         for ent in self.world.em.getEntsInChunk(*self.pos):
@@ -59,3 +62,6 @@ class Chunk(object):
         if len([i for i in self.world.game.players.values() if i.entity.getChunk() == self.pos]):
             print "Unloading for lack of players!"
             self.unload()
+
+    def spawnEntity(self, obj):
+        self.world.game.sendNear(obj.getSpawnPacket(), obj.loc, 150) #@TODO is 150 a valid block dist? check mc soruce

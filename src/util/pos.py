@@ -1,6 +1,6 @@
 from pymclevel.nbt import *
-from proto.packets import Packet
-from math import atan2, cos, degrees, radians, pi, sin, sqrt
+#from proto.packets import Packet
+from math import degrees, radians, pi, sqrt
 
 def getXYZ(args):
     if len(args) == 1: x, y, z = args[0].get()
@@ -8,82 +8,27 @@ def getXYZ(args):
     return int(x), int(y), int(z)
 
 class Position(object):
-    kargs = ["x", "y", "z", "yaw", "pitch", "vx", "vy", "vz"]
+    def __init__(self, location=None, velocity=None, orientation=None):
+        self.loc = location
+        self.velo = velocity
+        self.ori = orientation
+        if self.loc: self._buildProps()
 
-    def __init__(self, *args, **kwargs):
-        if len(args):
-            for i in range(0, len(args)):
-                self.__dict__[kargs[i]] = args[i]
-        elif len(kwargs):
-            for k, v in kwargs:
-                if k in self.kargs: self.__dict__[k] = v
-        else:
-            [setattr(self, i, 0) for i in self.kargs]
+    def modifyPacket(self, pak):
+        self.loc.modifyPacket(pak)
+        self.velo.modifyPacket(pak)
+        self.ori.modifyPacket(pak)
 
-    def getTeleportPacket(self):
-        pk = Packet("teleport")
-        pk.x = self.x*32
-        pk.y = self.y*32
-        pk.z = self.z*32
-        pk.yaw, pk.pitch = self.toFracs()
-        return pk
+    def _buildProps(self): # Fuck this
+        self.x = property(self.loc.getX, self.loc.setX)
+        self.y = property(self.loc.getY, self.loc.setY)
+        self.z = property(self.loc.getZ, self.loc.setZ)
 
-    @property
-    def bx(self): return self.x*32
-
-    @property
-    def by(self): return self.y*32
-
-    @property
-    def bz(self): return self.z*32
-
-    def fromLocation(self, l):
-        self.x, self.y, self.z = l.get()
-        return self
-
-    def fromOrientation(self, o):
-        self.yaw, self.pitch = o.get()
-        return self
-
-    def fromVelocity(self, v):
-        self.vx, self.vy, self.vz = v.get()
-        return self
-
-    def toLocation(self):
-        return Location(self.x, self.y, self.z)
-
-    def toOrientation(self):
-        return Orientation(self.yaw, self.pitch)
-
-    def toVelocity(self):
-        return Velocity(self.vx, self.vy, self.vz)
-
-    def modifyPacket(self, p, velo=False, block=False):
-        k = ['x', 'y', 'z']
-        if velo: [setattr(p, i, getattr(self, "v"+i)) for i in k]
-        else: [setattr(p, i, getattr(self, i)) for i in k]
-        [setattr(p, i, getattr(self, i)) for i in self.kargs if len(i) > 2]
-        return p
-
-    def change(self, k, val):
-        self.__dict__[k] += val
-        return self
-
-    def fromDegs(self, yaw, pitch):
-        self.yaw = radians(yaw) % (pi * 2)
-        self.pitch = radians(pitch)
-
-    def toDegs(self):
-        return int(round(degrees(self.yaw))), int(round(degrees(self.pitch)))
-
-    def toFracs(self):
-        yaw = int(self.yaw * 255 / (2 * pi)) % 256
-        pitch = int(self.pitch * 255 / (2 * pi)) % 256
-        return yaw, pitch
-
-
-class PlayerPosition(Position):
-    kargs = ["x", "y", "z", "yaw", "pitch", "vx", "vy", "vz", "stance", "grounded"]
+    def onLoad(self, us):
+        self.loc = us.loc
+        self.velo = us.velo
+        self.ori = us.rotation
+        if self.loc: self._buildProps()
 
 class Locatable(object):
     key = []
@@ -119,15 +64,28 @@ class Locatable(object):
             setattr(self, k, getattr(pk, k))
         return self
 
+    def modifyPacket(self, pk):
+        for k in self.key:
+            setattr(pk, k, getattr(self, k))
+        return pk
+
 class Location(Locatable):
     key = ['x', 'y', 'z']
 
-    def getRel(self, other):
-        x, y, z = self.x-other.x, self.y-other.y, self.z-other.z
-        return x, y, z
+    # No one likes -ters, but we need them for property()
+    # No really. This looks like shit. :(
+    def getX(self): return self.x
+    def getY(self): return self.y
+    def getZ(self): return self.z
+    def setX(self, val): self.x = val
+    def setY(self, val): self.y = val
+    def setZ(self, val): self.z = val
+
+    def toRelative(self): return self.x*32, self.y*32, self.z*32
 
     def getChunk(self): return int(self.x) >> 4, int(self.z) >> 4
-    def __sub__(self, other): # euclidean distance
+
+    def __sub__(self, other): # Euclidean Distance
         x = ((self.x-other.x)**2)
         y = ((self.y-other.y)**2)
         z = ((self.z-other.z)**2)
@@ -145,3 +103,16 @@ class Velocity(Location):
 class Orientation(Locatable):
     key = ['yaw', 'pitch']
     tag = TAG_Float
+
+    def fromDegs(self, yaw, pitch):
+        self.yaw = radians(yaw) % (pi * 2)
+        self.pitch = radians(pitch)
+        return self
+
+    def toDegs(self):
+        return int(round(degrees(self.yaw))), int(round(degrees(self.pitch)))
+
+    def toFracs(self):
+        yaw = int(self.yaw * 255 / (2 * pi)) % 256
+        pitch = int(self.pitch * 255 / (2 * pi)) % 256
+        return yaw, pitch
