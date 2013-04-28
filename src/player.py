@@ -43,23 +43,16 @@ class Player(object):
         self.world.modifyBlock(0, loc)
 
     # Packet Parsing
-    def positionChange(self, pak):
-        #print Location(pak.x, pak.y, pak.z)-self.pos.toLocation()
-        x, y, z = pak.x*32, pak.y*32, pak.z*32
-        dif = (self.pos.x-x, self.pos.y-y, self.pos.z-z)
-        self.pos.x, self.pos.y, self.pos.z = x, y, z
-        pk = Packet("entity-position", dx=dif[0], dy=dif[1], dz=dif[2])
-        self.game.broadcast(pk, [self])
-        #self.game.broadcast(self.getTeleportPak(), [self])
+    def positionChange(self, pak): #@TODO eventually implement relative moves
+        self.pos.loc.x, self.pos.loc.y, self.pos.loc.z = pak.x, pak.y, pak.z
+        self.game.broadcast(self.getTeleportPak(), [self])
 
     def lookChange(self, pak):
         self.pos.ori.fromDegs(pak.yaw, pak.pitch)
-        self.game.broadcast(self.getTeleportPak(), [self])
         pk = Packet("entity-orientation", eid=self.entity.id)
         pk.yaw, pk.pitch = self.pos.ori.toFracs()
         self.game.broadcast(pk, [self])
         self.game.broadcast(Packet("entity-head", eid=self.entity.id, yaw=self.pos.ori.toFracs()[0]), [self])
-        #self.game.broadcast(self.getTeleportPak(), [self])
 
     def groundChange(self, pak): self.onGround = bool(pak.grounded) #@TODO send packet
 

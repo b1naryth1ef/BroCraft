@@ -79,15 +79,16 @@ class Game(object):
     def playerJoin(self, p):
         self.broadcast(Packet("players", username=p.username, online=True, ping=0))
         if len(self.players):
-            pk = Packet("player", eid=p.entity.id, username=p.username, x=p.pos.bx, y=p.pos.by, z=p.pos.bz, yaw=0, pitch=0, item=0, metadata={})
+            x, y, z = p.pos.loc.toRelative()
+            pk = Packet("player", eid=p.entity.id, username=p.username, x=x, y=y, z=z, yaw=0, pitch=0, item=0, metadata={})
             self.broadcast(pk, ignore=[p])
         self.players[p.username] = p
         self.broadcastMsg("{yellow}%s joined the game" % p.username)
 
         #@DEBUG
-        it = ItemStack(mm.DIRT, 64).toEntity()
-        c = self.wm.worlds[0].loaded_chunks[(0, 0)]
-        c.spawnEntity(it)
+        # it = ItemStack(mm.DIRT, 64).toEntity()
+        # c = self.wm.worlds[0].loaded_chunks[(0, 0)]
+        # c.spawnEntity(it)
 
     def playerQuit(self, p):
         del self.players[p.username]
