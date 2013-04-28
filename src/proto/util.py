@@ -276,3 +276,9 @@ metadata = MetadataAdapter(
         Const(UBInt8("terminator"), 0x7f),
     ),
 )
+
+chunkmeta = Struct("chunkmeta",
+    UBInt32('x'),
+    UBInt32('y'),
+    UBInt16("primary"),
+    UBInt16("add"))
