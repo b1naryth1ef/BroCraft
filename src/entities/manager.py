@@ -5,10 +5,10 @@ class EntityManager(object):
         self.chunk = chunk
         self.ents = {}
 
-    def getEntsInChunk(self, x, y):
-        for ent in self.ents.values():
-            if int(ent.pos.x) >> 4 == x and int(ent.pos.y) >> 4 == y:
-                yield ent
+    def getEntsInChunk(self, x, y): pass
+        # for ent in self.ents.values():
+        #     if int(ent.pos.x) >> 4 == x and int(ent.pos.y) >> 4 == y:
+        #         yield ent
 
     def generateId(self):
         id = random.randint(111111, 999999)

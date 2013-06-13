@@ -39,16 +39,18 @@ class Player(object):
         return True
 
     def digBlock(self, loc):
-        #block = self.world.getBlock(loc)
+        block = self.world.getBlock(loc)
+        pk = Packet("sound", sid="block_break", x=loc.x, y=loc.y, z=loc.z, data=block, volumemod=True)
         self.world.modifyBlock(0, loc)
+        self.game.sendNear(pk, loc, 50)
 
     # Packet Parsing
     def positionChange(self, pak): #@TODO eventually implement relative moves
         self.pos.loc.x, self.pos.loc.y, self.pos.loc.z = pak.x, pak.y, pak.z
         self.game.broadcast(self.getTeleportPak(), [self])
 
-    def lookChange(self, pak):
-        self.pos.ori.fromDegs(pak.yaw, pak.pitch)
+    def lookChange(self, pak, rec=True):
+        if pak: self.pos.ori.fromDegs(pak.yaw, pak.pitch)
         pk = Packet("entity-orientation", eid=self.entity.id)
         pk.yaw, pk.pitch = self.pos.ori.toFracs()
         self.game.broadcast(pk, [self])
@@ -81,9 +83,9 @@ class Player(object):
     def getLocPak(self): #@TODO dis r brok again
         pk = Packet("location")
         self.pos.modifyPacket(pk)
-        pk.x = self.pos.x/32.0
-        pk.y = self.pos.y/32.0
-        pk.z = self.pos.z/32.0
+        pk.x = self.pos.loc.x
+        pk.y = self.pos.loc.y
+        pk.z = self.pos.loc.z
         pk.stance = pk.y+1.62
         pk.grounded = self.onGround
         return pk
@@ -111,11 +113,6 @@ class Player(object):
         else: self.kick("Could not load chunks. <3")
 
     def login(self):
-        #@DEBUG
-        self.entity.pos.x = 0
-        self.entity.pos.y = 2048 #64
-        self.entity.pos.z = 0
-
         # Login Packet
         pk = Packet("login")
         pk.eid = self.entity.id
@@ -133,15 +130,21 @@ class Player(object):
         # Preload Chunks in a 10x10 around the player
         self.loadChunkArea(5, 5)
 
-        pk = Packet("compass") #@TODO cleanup
+        # Compass
+        pk = Packet("compass")
         if self.entity.spawn: pk.x, pk.y, pk.z = self.entity.spawn
         else: pk.x, pk.y, pk.z = (0, 64, 0)
         self.client.write(pk)
 
+        # Position reset
+        self.pos.x = 0
+        self.pos.loc.y = 64 #64
+        self.pos.z = 0
+
         self.client.write(self.getLocPak()) # Spawn the player in
 
         # Load a larger area for el playero
-        #self.loadChunkArea(30, 30)
+        self.game.tm.run(self.loadChunkArea, 10, 10)
 
     def loadChunkArea(self, x, z): # Load/Send chunks in a area around the player
         _x, _z = self.entity.getChunk()
@@ -155,3 +158,6 @@ class Player(object):
             self.game.playerQuit(self)
 
     def parseCommand(self, msg): pass
+    def getSpawnPacket(self):
+        x, y, z = self.pos.loc.toRelative()
+        return Packet("player", eid=self.entity.id, username=self.username, x=x, y=y, z=z, yaw=0, pitch=0, item=0, metadata={})

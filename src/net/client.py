@@ -68,10 +68,10 @@ class Client(protocol.Protocol):
 
         if p.name == "dc": self.connectionLost("quit")
 
-        #Blocks/Modify
+        # Blocks/Modify
         if p.name == "digging": self.player.dig(p)
 
-        #Movement
+        # Movement
         if p.name == "orientation" or p.name == "location":
             self.player.lookChange(p)
             self.player.groundChange(p)
@@ -79,6 +79,7 @@ class Client(protocol.Protocol):
             self.player.positionChange(p)
             self.player.groundChange(p)
 
+        # Chat
         if p.name == "chat":
             if p.message.startswith("/"): return self.player.parseCommand(p.message)
             if p.message.startswith("@"): pass

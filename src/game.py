@@ -4,6 +4,8 @@ from worlds.world import World
 from proto.packets import Packet, CombPacket
 from util.color import colorize
 from util.ticks import Ticker
+from util.log import log
+from util.thread import ThreadManager
 import time, thread
 
 #DEBUG
@@ -21,6 +23,7 @@ class Game(object):
 
         w = World(self, 0, "/home/andrei/.minecraft/saves/world/level.dat")
         self.wm = WorldManager(w)
+        self.tm = ThreadManager()
 
         self.running = False
         self.callTen = self.addTick(Ticker(self.call10, 10, True))
@@ -50,15 +53,16 @@ class Game(object):
                     except: print "Exception in a Ticker call!"
 
     def runGame(self):
+        log.debug("Game starting!")
         self.running = True
         self.wm.load()
         thread.start_new_thread(self.tickLoop, ())
         self.server.run()
 
     def stopGame(self):
+        log.debug("Game stopping!")
         self.running = False
         self.wm.unload()
-        print "Done!"
 
     def broadcast(self, pak, ignore=[]):
         for p in self.players.values():
@@ -66,9 +70,10 @@ class Game(object):
             p.client.write(pak)
 
     def broadcastMsg(self, msg):
+        log.debug("Broadcasting message: %s" % msg)
         self.broadcast(Packet("chat", message=colorize(msg)))
 
-    def sendNear(self, pak, loc, dist): #@TODO do it
+    def sendNear(self, pak, loc, dist):
         count = 0
         for p in self.players.values():
             if loc-p.pos.loc < dist:
@@ -77,18 +82,22 @@ class Game(object):
         return bool(count)
 
     def playerJoin(self, p):
+        log.debug("Player join: %s" % p.username)
         self.broadcast(Packet("players", username=p.username, online=True, ping=0))
         if len(self.players):
-            x, y, z = p.pos.loc.toRelative()
-            pk = Packet("player", eid=p.entity.id, username=p.username, x=x, y=y, z=z, yaw=0, pitch=0, item=0, metadata={})
+            # Tell other players we exist
+            pk = p.getSpawnPacket()
             self.broadcast(pk, ignore=[p])
+            # Load other players for us
+            for i in self.players.values():
+                p.client.write(i.getSpawnPacket())
         self.players[p.username] = p
         self.broadcastMsg("{yellow}%s joined the game" % p.username)
 
         #@DEBUG
-        # it = ItemStack(mm.DIRT, 64).toEntity()
-        # c = self.wm.worlds[0].loaded_chunks[(0, 0)]
-        # c.spawnEntity(it)
+        it = ItemStack(mm.DIRT, 64).toEntity()
+        c = self.wm.worlds[0].loaded_chunks[(0, 0)]
+        c.spawnEntity(it)
 
     def playerQuit(self, p):
         del self.players[p.username]

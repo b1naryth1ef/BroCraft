@@ -15,8 +15,8 @@ class Server(object):
         self.game = game
         self.factory = ServerFactory(self.game)
 
-        self.protocol = 60
-        self.version = "1.5.1"
+        self.protocol = 61
+        self.version = "1.5.2"
 
         self.port = port
         self.max_players = max_players

@@ -11,22 +11,16 @@ class Entity(object):
     invulnerable = False
     despawn = False
     age = 0
-    # Hybrid Classes
-    pos = Position()
-
-    # Loaders
-    loc = Location()
-    velo = Velocity()
-    rotation = Orientation()
 
     def __init__(self):
         self.loc = Location(0, 0, 0)
         self.velo = Velocity(0, 0, 0)
         self.rotation = Orientation(0, 0)
+        self.pos = Position()
         self.pos.onLoad(self)
 
     def getChunk(self):
-        return (int(self.pos.x >> 4), int(self.pos.z) >> 4)
+        return (int(self.loc.x) >> 4, int(self.loc.z) >> 4)
 
     def loadFromNbt(self, nbt):
         self.tag = nbt
@@ -58,7 +52,7 @@ class BaseItem(Entity):
         self.age = Tag("Age", TAG_Short, 0)
 
 class Item(BaseItem): #@TDOO "tag" logic for loading extra info
-    entity_type = 2
+    entity_type = "stack"
     def loadFromNbt(self, nbt):
         BaseItem.loadFromNbt(self, nbt)
 
@@ -77,7 +71,10 @@ class Item(BaseItem): #@TDOO "tag" logic for loading extra info
         p.z = self.loc.z
         p.pitch = self.rotation.pitch
         p.yaw = self.rotation.yaw
-        p.data = 1 #@DEV what does this do?
+        p.data = 1
+        p.speedx = self.velo.x
+        p.speedz = self.velo.z
+        p.speedy = self.velo.y
         return p
 
 class XPOrb(BaseItem): pass

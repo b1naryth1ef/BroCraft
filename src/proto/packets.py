@@ -64,7 +64,7 @@ PACKETS = {
         MetaArray(lambda context: context["count"], chunkmeta)), #@TODO
 
     60: Struct("explosion", BFloat64("x"), BFloat64("y"), BFloat64("z"), BFloat32("radius"), UBInt32("count"), MetaField("blocks", lambda context: context["count"] * 3), BFloat32("motionx"), BFloat32("motiony"), BFloat32("motionz")),
-    61: Struct("sound", sounds, SBInt32("x"), UBInt8("y"), SBInt32("z"), UBInt32("data"), Bool("volume-mod")),
+    61: Struct("sound", sounds, SBInt32("x"), UBInt8("y"), SBInt32("z"), UBInt32("data"), Bool("volumemod")),
     62: Struct("named-sound", AlphaString("name"), UBInt32("x"), UBInt32("y"), UBInt32("z"), BFloat32("volume"), UBInt8("pitch")),
     70: Struct("state", game_states, mode),
     71: Struct("thunderbolt", UBInt32("eid"), UBInt8("gid"), SBInt32("x"), SBInt32("y"), SBInt32("z")),
@@ -118,10 +118,18 @@ class Packet(PacketBase):
             self.__dict__[k] = v
         return self
 
+    def _gendebug(self):
+        res = []
+        for k, v in self.__dict__.items():
+            res.append("  %s is %s (%s)" % (k, v, type(v)))
+        return '\n'.join(res)
+
     def debug(self): #Imagine B1n fucking something up, and needing a debug function!
         print "DEBUG FOR %s" % self.name
-        for k, v in self.__dict__.items():
-            print "  %s is %s (%s)" % (k, v, type(v))
+        print self._gendebug()
+
+    def repr(self): return "<Packet '%s'>" % self.name
+
 
 class CombPacket(PacketBase):
     def __init__(self, *paks):
