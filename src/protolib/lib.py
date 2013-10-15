@@ -229,6 +229,11 @@ PacketDef("0x03", "timeupdate", [ULong("age"), ULong("time")])
 PacketDef("0x04", "entity_equipment", [UInt("id"), UShort("slot"), Slot("item")])
 
 
+# State
+#0 = none
+#1 = handshaking (auth/enc/etc)
+#2 = connected
+
 if __name__ == "__main__":
     d = MockData("\x0f\x00\x00\x09localhost\x63\xdd\x02")
     print decode(d).__dict__
