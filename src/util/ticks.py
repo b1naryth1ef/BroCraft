@@ -1,3 +1,4 @@
+from util.log import log
 import time
 
 # This function lets us keep track of slow shit
@@ -11,7 +12,7 @@ def TickWarn(rate, name=None):
             val = func(*args, **kwargs)
             et = time.time()
             if et-st > .05*rate:
-                print "Call to %s took longer than expected (approx %s ticks)" % (name, (et-st)/.05)
+                log.warning("Call to %s took longer than expected (approx %s ticks)" % (name, (et-st)/.05))
             return val
         return repl
     return deco

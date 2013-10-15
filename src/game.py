@@ -21,7 +21,7 @@ class Game(object):
         self.tick = 0
         self.max_ticks = 50000000 # Random number ftw
 
-        w = World(self, 0, "/home/andrei/.minecraft/saves/world/level.dat")
+        w = World(self, 0, "/home/b1nzy/.minecraft/saves/asdfasdf/level.dat")
         self.wm = WorldManager(w)
         self.tm = ThreadManager()
 
@@ -50,7 +50,7 @@ class Game(object):
             for t in self.ticks:
                 if t.call_on == self.tick:
                     try: t.call()
-                    except: print "Exception in a Ticker call!"
+                    except Exception, e: log.warning("Exception in a Ticker call! (%s)" % e)
 
     def runGame(self):
         log.debug("Game starting!")
@@ -94,9 +94,13 @@ class Game(object):
         self.players[p.username] = p
         self.broadcastMsg("{yellow}%s joined the game" % p.username)
 
+    def test(self):
         #@DEBUG
         it = ItemStack(mm.DIRT, 64).toEntity()
         c = self.wm.worlds[0].loaded_chunks[(0, 0)]
+        it.loc.x = 0
+        it.loc.y = 64
+        it.loc.z = 0
         c.spawnEntity(it)
 
     def playerQuit(self, p):

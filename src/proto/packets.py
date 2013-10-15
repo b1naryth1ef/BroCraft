@@ -29,9 +29,10 @@ PACKETS = {
     18: Struct("animate", UBInt32("eid"), animation),
     19: Struct("action", UBInt32("eid"), action),
     20: Struct("player", UBInt32("eid"), AlphaString("username"), SBInt32("x"), SBInt32("y"), SBInt32("z"), UBInt8("yaw"), UBInt8("pitch"), SBInt16("item"), metadata),
-    21: Struct("pickup", UBInt32("eid"), Embed(items), SBInt32("x"), SBInt32("y"), SBInt32("z"), UBInt8("yaw"), UBInt8("pitch"), UBInt8("roll")),
+    #21: Struct("pickup", UBInt32("eid"), Embed(items), SBInt32("x"), SBInt32("y"), SBInt32("z"), UBInt8("yaw"), UBInt8("pitch"), UBInt8("roll")),
     22: Struct("collect", UBInt32("eid"), UBInt32("destination")),
-    23: Struct("spawn", UBInt32("eid"), entity_type, SBInt32("x"), SBInt32("y"), SBInt32("z"), SBInt8("pitch"), SBInt8("yaw"), SBInt32("data"), SBInt16("speedx"), SBInt16("speedy"), SBInt16("speedz")),
+    23: Struct("object", UBInt32("eid"), entity_type, SBInt32("x"), SBInt32("y"), SBInt32("z"), UBInt8("pitch"), UBInt8("yaw"), SBInt32("data"), If(lambda context: context["data"] != 0, Struct("speed", SBInt16("x"), SBInt16("y"), SBInt16("z")))),
+    #23: Struct("spawn", UBInt32("eid"), entity_type, SBInt32("x"), SBInt32("y"), SBInt32("z"), SBInt8("pitch"), SBInt8("yaw"), SBInt32("data"), SBInt16("speedx"), SBInt16("speedy"), SBInt16("speedz")),
     24: Struct("mob", UBInt32("eid"), mob_type, SBInt32("x"), SBInt32("y"), SBInt32("z"), SBInt8("yaw"), SBInt8("pitch"), SBInt8("head_yaw"), SBInt16("vx"), SBInt16("vy"), SBInt16("vz"), metadata),
     25: Struct("painting", UBInt32("eid"), AlphaString("title"), SBInt32("x"), SBInt32("y"), SBInt32("z"), face),
     26: Struct("experience", UBInt32("eid"), SBInt32("x"), SBInt32("y"), SBInt32("z"), UBInt16("quantity")),
@@ -54,23 +55,25 @@ PACKETS = {
     53: Struct("block", SBInt32("x"), UBInt8("y"), SBInt32("z"), UBInt16("type"), UBInt8("meta")),
     54: Struct("block-action", SBInt32("x"), SBInt16("y"), SBInt32("z"), UBInt8("byte1"), UBInt8("byte2"), UBInt16("blockid")),
     55: Struct("block-break-anim", UBInt32("eid"), UBInt32("x"), UBInt32("y"), UBInt32("z"), UBInt8("stage")),
-    56: Struct(
-        "bulk-chunk",
-        SBInt16("count"),
-        UBInt32("data-len"),
-        Bool("skylight"),
-        Bytes("data", lambda ctx: ctx['data-len']),
-        #PascalString("data", length_field=UBInt32("data-len"), encoding="zlib"),
-        MetaArray(lambda context: context["count"], chunkmeta)), #@TODO
-
+    56: Struct("bulk-chunk", UBInt16("count"), UBInt32("length"), UBInt8("sky_light"), MetaField("data", lambda ctx: ctx["length"]),
+        MetaArray(lambda context: context["count"],
+            Struct("metadata",
+                UBInt32("chunk_x"),
+                UBInt32("chunk_z"),
+                UBInt16("bitmap_primary"),
+                UBInt16("bitmap_secondary"),
+            )
+        )
+    ),
     60: Struct("explosion", BFloat64("x"), BFloat64("y"), BFloat64("z"), BFloat32("radius"), UBInt32("count"), MetaField("blocks", lambda context: context["count"] * 3), BFloat32("motionx"), BFloat32("motiony"), BFloat32("motionz")),
     61: Struct("sound", sounds, SBInt32("x"), UBInt8("y"), SBInt32("z"), UBInt32("data"), Bool("volumemod")),
     62: Struct("named-sound", AlphaString("name"), UBInt32("x"), UBInt32("y"), UBInt32("z"), BFloat32("volume"), UBInt8("pitch")),
+    63: Struct("particle", AlphaString("name"), BFloat32("x"), BFloat32("y"), BFloat32("z"), BFloat32("x_offset"), BFloat32("y_offset"), BFloat32("z_offset"), BFloat32("speed"), UBInt32("count")),
     70: Struct("state", game_states, mode),
     71: Struct("thunderbolt", UBInt32("eid"), UBInt8("gid"), SBInt32("x"), SBInt32("y"), SBInt32("z")),
-    100: Struct("window-open", UBInt8("wid"), window_types, AlphaString("title"), UBInt8("slots")),
+    100: Struct("window-open", UBInt8("wid"), window_types, AlphaString("title"), UBInt8("slots"), UBInt8("use_title")),
     101: Struct("window-close", UBInt8("wid")),
-    102: Struct("window-action", UBInt8("wid"), UBInt16("slot"), UBInt8("button"), UBInt16("token"), Bool("shift"), Embed(items)),
+    102: Struct("window-action", UBInt8("wid"), UBInt16("slot"), UBInt8("button"), UBInt16("token"), UBInt8("mode"), Embed(items)),
     103: Struct("window-slot", UBInt8("wid"), UBInt16("slot"), Embed(items)),
     104: Struct("inventory", UBInt8("wid"), SBInt16("length"), MetaArray(lambda context: context["length"], items)),
     105: Struct("window-progress", UBInt8("wid"), UBInt16("bar"), UBInt16("progress")),
@@ -78,7 +81,7 @@ PACKETS = {
     107: Struct("window-creative", UBInt16("slot"), Embed(items)),
     108: Struct("enchant", UBInt8("wid"), UBInt8("enchantment")),
     130: Struct("sign", SBInt32("x"), UBInt16("y"), SBInt32("z"), AlphaString("line1"), AlphaString("line2"), AlphaString("line3"), AlphaString("line4")),
-    131: Struct("map", UBInt16("type"), UBInt16("itemid"), PascalString("data", length_field=UBInt8("length"))),
+    131: Struct("map", UBInt16("type"), UBInt16("itemid"), PascalString("data", length_field=UBInt16("length"))),
     132: Struct("tile-update", SBInt32("x"), UBInt16("y"), SBInt32("z"), UBInt8("action"), PascalString("data", length_field=SBInt16("data-len"))),
     200: Struct("statistics", UBInt32("sid"), UBInt8("count")),
     201: Struct("players", AlphaString("username"), Bool("online"), UBInt16("ping")),
@@ -128,7 +131,7 @@ class Packet(PacketBase):
         print "DEBUG FOR %s" % self.name
         print self._gendebug()
 
-    def repr(self): return "<Packet '%s'>" % self.name
+    def __repr__(self): return "<Packet '%s'>" % self.name
 
 
 class CombPacket(PacketBase):

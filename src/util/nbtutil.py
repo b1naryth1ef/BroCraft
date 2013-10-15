@@ -1,18 +1,39 @@
+from pymclevel.nbt import *
 
+key = {
+    TAG_Float: float,
+    TAG_Short: int,
+    TAG_Int: int,
+    TAG_Byte: bool,
+    TAG_String: str
+}
 
-#Creds to pymclevel
-def Tag(tagName, tagType, default_or_func=None):
-    def getter(self):
-        if tagName not in self.tag:
-            if hasattr(default_or_func, "__call__"):
-                default = default_or_func(self)
-            else:
-                default = default_or_func
+class Tag(object):
+    def __init__(self, name, ttype, default=None):
+        self.name = name
+        self.type = ttype
+        self.pytype = key[self.type]
+        self.value = None
+        self.tag = None
 
-            self.tag[tagName] = tagType(default)
-        return self.tag[tagName].value
+        if hasattr(default, "__call__"):
+            self.default = default(self)
+        else:
+            self.default = default
 
-    def setter(self, val):
-        self.tag[tagName] = tagType(value=val)
+    def get(self): return self.value
+    def set(self, v): self.value = v
 
-    return property(getter, setter)
+    def __get__(self, inst, cls=None):
+        if not self.tag: self.tag = inst.tag[self.name]
+        if not self.value: self.value = self.tag.value
+        return self.get()
+
+    def __set__(self, val):
+        self.set(val)
+
+    def __add__(self, other):
+        self.set(self.get() + self.pytype(other))
+
+    def __sub__(self, other):
+        self.set(self.get() - self.pytype(other))

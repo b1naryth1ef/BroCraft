@@ -24,6 +24,10 @@ class Position(object):
         self.y = property(self.loc.getY, self.loc.setY)
         self.z = property(self.loc.getZ, self.loc.setZ)
 
+        self.getX = self.loc.getX
+        self.getY = self.loc.getY
+        self.getZ = self.loc.getZ
+
     def onLoad(self, us):
         self.loc = us.loc
         self.velo = us.velo
@@ -92,7 +96,7 @@ class Location(Locatable):
         return sqrt(x+y+z)
 
     def __repr__(self):
-        return "<Location (%s, %s, %s)>" % self.get()
+        return "<Location (%s, %s, %s)>" % (self.x, self.y, self.z)
 
     def __eq__(self, other):
         return (self.x == other.x) and (self.y == other.y) and (self.z == other.z)

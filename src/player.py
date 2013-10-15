@@ -1,6 +1,7 @@
 from proto.packets import Packet
 #from proto.util import grounded, position, orientation
 from util.pos import Location
+from util.log import log
 #from entities.livingentity import PlayerEntity
 from construct import * #@TEMP
 import random, time
@@ -16,15 +17,19 @@ class Player(object):
         self.entity = self.world.loadPlayer(self.username)
         self.loaded_chunks = []
 
+        self.connected = False
+
         # Etc
         self.onGround = False
+        self.lastGround = None # Y-Value
 
         # Ping/etc
         self.last_ping = 0
         self.ping_key = 0
 
-        # Tick-tracking
+        # Tick-tracking/Threading
         self.callhalf = 0
+        self.loadThread = None
 
         # Block Digging
         self.digging = None
@@ -56,7 +61,17 @@ class Player(object):
         self.game.broadcast(pk, [self])
         self.game.broadcast(Packet("entity-head", eid=self.entity.id, yaw=self.pos.ori.toFracs()[0]), [self])
 
-    def groundChange(self, pak): self.onGround = bool(pak.grounded) #@TODO send packet
+    def updateHealth(self, value=0):
+        log.debug("Player (%s)'s health updated (delta value is %s)" % (self.username, value))
+        self.entity.health += value
+        self.client.write(Packet("health", hp=self.entity.health, fp=20, saturation=5))
+
+    def groundChange(self, pak):
+        if self.lastGround:
+            if self.lastGround-self.pos.getY() > 4: self.updateHealth(-1)
+            self.lastGround = None
+        else: self.lastGround = self.pos.getY()
+        self.onGround = bool(pak.grounded) #@TODO send packet
 
     def dig(self, pak):
         loc = Location(pak.x, pak.y, pak.z)
@@ -113,6 +128,7 @@ class Player(object):
         else: self.kick("Could not load chunks. <3")
 
     def login(self):
+        self.connected = True
         # Login Packet
         pk = Packet("login")
         pk.eid = self.entity.id
@@ -144,20 +160,34 @@ class Player(object):
         self.client.write(self.getLocPak()) # Spawn the player in
 
         # Load a larger area for el playero
-        self.game.tm.run(self.loadChunkArea, 10, 10)
+        self.loadThread = self.game.tm.run(self.loadChunkArea, 10, 10)
 
     def loadChunkArea(self, x, z): # Load/Send chunks in a area around the player
         _x, _z = self.entity.getChunk()
         for cX in range(_x-x, _x+x):
             for cZ in range(_z-z, _z+z):
-                print "Sending player chunk @ %s, %s" % (cX, cZ)
+                log.debug("Sending player chunk @ %s, %s" % (cX, cZ))
+                if not self.connected:
+                    log.error("Player quit during loadChunkArea operation, causing it to quit!")
+                    return
                 self.loadChunk(cX, cZ)
 
     def disconnect(self):
+        self.connected = False
         if self.username in self.game.players.keys():
             self.game.playerQuit(self)
+        log.debug("Suggesting unload to %s chunks after %s quit" % (len(self.loaded_chunks), self.username))
+        for X, Y in self.loaded_chunks:
+            self.game.wm.get(0).getChunkAt(X, Y).suggestUnload()
 
-    def parseCommand(self, msg): pass
+    def parseCommand(self, msg):
+        log.info("%s sent command %s" % (self.username, msg))
+        self.game.test()
+
     def getSpawnPacket(self):
         x, y, z = self.pos.loc.toRelative()
-        return Packet("player", eid=self.entity.id, username=self.username, x=x, y=y, z=z, yaw=0, pitch=0, item=0, metadata={})
+        return Packet("player", eid=self.entity.id, username=self.username, x=x, y=y, z=z, yaw=0, pitch=0, item=0, metadata={
+            0: ("byte", 0),
+            1: ("short", 300),
+            8: ("int", 0),
+        })

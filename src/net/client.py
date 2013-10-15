@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 from twisted.internet import protocol
 from proto.packets import PACKETS, Packet, PacketBase, parse_packets
+from protolib.lib import getPacket, decode
 from player import Player
+from util.log import log
+
+from net import Buff
+
 import time
 
 class ClientError(Exception):
@@ -14,35 +19,50 @@ class Client(protocol.Protocol):
         self.server = self.game.server
         self.player = None
         self.last_pak = 0
-        self.buffer = ""
+        self.buffer = Buff()
+
+        # Is the connection init'd
+        self.started = False
 
     def authenticate(self): pass #Figure this out later
 
     def write(self, pak):
+        if self.player and not self.player.connected:
+            log.warning("Client.write failed due to the player (%s) being disconnected!" % self.player.username)
         if isinstance(pak, PacketBase):
             pak = pak.build()
         self.transport.write(pak)
 
     def dataReceived(self, data):
-        try:
-            self.parse(data)
-        except ClientError, e:
-            kp = Packet("dc")
-            kp.message = e.message
-            self.write(kp)
-            self.transport.loseConnection()
+        self.buffer.push_multi(data)
 
-    def parse(self, data): #Totes not like bravo :3
-        self.buffer += data
-        paks, self.buffer = parse_packets(self.buffer)
+        if not self.started:
+            log.debug("trying...")
+            val = decode(self.buffer, force_as=getPacket("handshake"))
+            if val:
+                log.debug("Got handshake!")
+                self.started = True
+                return
 
-        for i in paks:
-            p = Packet(struct=i[0]).read(i[1])
-            self.parseOne(p)
+        packet = decode(self.buffer)
+        if not packet:
+            log.warning("No packet found (Right now this breaks everything :( )")
+            continue
+        log.info("Found packet %s" % packet.name)
+        #self.transport.loseConnection()
+
+    def parse(self):
+        """
+        Attempt to parse the buffer
+        """
+        val = decode(self.buffer)
+        if not val:
+            return
+        log.debug("PARSED: %s" % val.name)
 
     def parseOne(self, p):
         if p.name not in ['grounded', 'position']:
-            print "Parsing packet '%s'..." % p.name
+            log.debug("Parsing Packet %s" % p.name)
         self.last_pak = time.time()
         if p.name == "ping" and self.player:
             self.player.ping(p)

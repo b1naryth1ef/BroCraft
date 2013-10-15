@@ -1,5 +1,6 @@
 from twisted.internet import protocol, reactor
 from net.client import Client
+from util.log import log
 
 class ServerFactory(protocol.Factory):
     def __init__(self, game):
@@ -27,11 +28,34 @@ class Server(object):
     def tick(self): pass
 
     def isOp(self, username): #@TODO
-        if username.lower() == "b1naryth1ef":
+        if username.lower() in ["b1naryth1ef", "spekode"]:
             return True
         return False
 
     def run(self):
+        log.info("Server Starting up!")
         reactor.addSystemEventTrigger('before', 'shutdown', self.game.stopGame)
+        reactor.listenTCP(self.port, self.factory)
+        log.info("Server running...")
+        reactor.run()
+
+class DebugClient(protocol.Protocol):
+    def dataReceived(self, data):
+        log.debug("Got a line! such wow!")
+        with open("output.txt", "ab") as f:
+            f.write(data)
+
+class DebugFactory(protocol.Factory):
+    def buildProtocol(self, addr):
+        c = DebugClient()
+        c.factory = self
+        return c
+
+class DebugServer(object):
+    def __init__(self, port=25565):
+        self.factory = DebugFactory()
+        self.port = port
+
+    def run(self):
         reactor.listenTCP(self.port, self.factory)
         reactor.run()

@@ -22,13 +22,11 @@ class WorldManager(object):
 
     def addWorld(self, w):
         if not w.loaded:
-            print "WorldManager loading world %s" % w.id
             w.load()
             return self.addWorld(w)
 
     def rmvWorld(self, w):
         if isinstance(w, World):
             w = w.id
-        print 'WorldManager unloading world %s' % w
         self.worlds[w].unload()
         del self.worlds[w]

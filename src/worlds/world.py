@@ -6,6 +6,7 @@ from proto.packets import Packet
 from util.pos import getXYZ
 from util.ticks import TickWarn
 from worlds.chunk import Chunk
+from util.log import log
 
 class World(object):
     def __init__(self, game, wid, path, name="world"):
@@ -52,12 +53,11 @@ class World(object):
         return self.loaded_chunks[(x, z)]
 
     def loadChunk(self, x, z):
-        print "Loading chunk @ (%s, %s)..." % (x, z),
         try:
             rc = self.level.getChunk(x, z)
-            print "DONE!"
+            log.info("Loading chunk @ (%s, %s)... DONE" % (x, z))
         except ChunkNotPresent:
-            print "FAILED (Doesnt Exist)"
+            log.warning("Loading chunk @ (%s, %s)... FAILED (Doesnt Exist)" % (x, z))
             return False
         self.loaded_chunks[(x, z)] = Chunk(self, (x, z), rc)
         return True
@@ -68,6 +68,7 @@ class World(object):
                 self.loadChunk(_X, _Z)
 
     def load(self):
+        log.info("Loading world #%s @ %s" % (self.id, self.path))
         self.level = mclevel.fromFile(self.path)
 
         self.spawnX = 0 #self.level.root_tag['Data']['SpawnX'].value
@@ -81,18 +82,19 @@ class World(object):
         # Load a 5x5 around spawn
         self.loadChunkRange(int(self.spawnX) >> 4, int(self.spawnZ) >> 4, 5, 5)
 
-        print "Loaded %s chunks!" % len(self.loaded_chunks)
+        log.info("World (%s) loaded w/ %s active chunks" % (self.id, len(self.loaded_chunks)))
         self.loaded = True
 
     def unload(self):
-        print "Unloading all chunks..."
+        log.info("Unloading world #%s!" % self.id)
         for chunk in self.loaded_chunks.values():
             chunk.unload()
-        print "Relighting all chunks..."
+        log.info("Relighting all chunks for #%s" % self.id)
         self.level.generateLights()
-        print "Saving..."
+        log.info("Saving #%s" % self.id)
         self.level.saveInPlace()
         self.level.close()
+        log.info("World #%s unloaded!" % self.id)
 
     @TickWarn(1, "World Tick")
     def tick(self):

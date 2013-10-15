@@ -2,6 +2,7 @@ from pymclevel.nbt import *
 from util.pos import Location, Velocity, Orientation, Position
 from util.nbtutil import Tag
 from proto.packets import Packet
+from proto.util import Speed, Slot
 
 class Entity(object):
     id = None
@@ -63,7 +64,7 @@ class Item(BaseItem): #@TDOO "tag" logic for loading extra info
         return self
 
     def getSpawnPacket(self):
-        p = Packet("spawn")
+        p = Packet("object")
         p.eid = self.id
         p.type = self.entity_type
         p.x = self.loc.x
@@ -72,9 +73,17 @@ class Item(BaseItem): #@TDOO "tag" logic for loading extra info
         p.pitch = self.rotation.pitch
         p.yaw = self.rotation.yaw
         p.data = 1
-        p.speedx = self.velo.x
-        p.speedz = self.velo.z
-        p.speedy = self.velo.y
+        p.speed = Speed(0, 0, 0)
+        return p
+
+    def getMetaPacket(self):
+        p = Packet("metadata")
+        p.eid = self.id
+        p.metadata = {
+            0: ('byte', 0),
+            1: ('short', 300),
+            10: ("slot", Slot.fromItem(self))
+        }
         return p
 
 class XPOrb(BaseItem): pass

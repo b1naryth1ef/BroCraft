@@ -1,6 +1,8 @@
 from construct import *
 from collections import namedtuple
 
+Speed = namedtuple('speed', 'x y z')
+
 class DoubleAdapter(LengthValueAdapter):
 
     def _encode(self, obj, context):
@@ -21,6 +23,66 @@ def AlphaString(name):
 # Boolean converter.
 def Bool(*args, **kwargs):
     return Flag(*args, default=True, **kwargs)
+
+#SLOTS
+class Slot(object):
+    def __init__(self, item_id=-1, count=1, damage=0, nbt=None):
+        self.item_id = item_id
+        self.count = count
+        self.damage = damage
+        # TODO: Implement packing/unpacking of gzipped NBT data
+        self.nbt = nbt
+
+    @classmethod
+    def fromItem(cls, item):
+        return cls(item.id, item.count, item.damage)
+
+    @property
+    def is_empty(self):
+        return self.item_id == -1
+
+    def __len__(self):
+        return 0 if self.nbt is None else len(self.nbt)
+
+    def __eq__(self, other):
+        return (self.item_id == other.item_id and
+                self.count == other.count and
+                self.damage == self.damage and
+                self.nbt == self.nbt)
+
+class SlotAdapter(Adapter):
+
+    def _decode(self, obj, context):
+        if obj.item_id == -1:
+            s = Slot(obj.item_id)
+        else:
+            s = Slot(obj.item_id, obj.count, obj.damage, obj.nbt)
+        return s
+
+    def _encode(self, obj, context):
+        if not isinstance(obj, Slot):
+            raise ConstructError('Slot object expected')
+        if obj.is_empty:
+            return Container(item_id=-1)
+        else:
+            return Container(item_id=obj.item_id, count=obj.count, damage=obj.damage,
+                             nbt_len=len(obj) if len(obj) else -1, nbt=obj.nbt)
+
+slot = SlotAdapter(
+    Struct("slot",
+        SBInt16("item_id"),
+        If(lambda context: context["item_id"] >= 0,
+            Embed(Struct("item_information",
+                UBInt8("count"),
+                UBInt16("damage"),
+                SBInt16("nbt_len"),
+                If(lambda context: context["nbt_len"] >= 0,
+                    MetaField("nbt", lambda ctx: ctx["nbt_len"])
+                )
+            )),
+        )
+    )
+)
 
 
 # Build faces, used during dig and build.
@@ -99,6 +161,7 @@ entity_type = Enum( #@TODO embed in Entity class
     wither_skull=66,
     # See http://wiki.vg/Entities#Objects
     falling_block=70,
+    frames=71,
     ender_eye=72,
     thrown_potion=73,
     dragon_egg=74,
@@ -115,6 +178,13 @@ status = Enum(
     drying=8,
     eating=9,
     sheep_eat=10,
+    golem_rose=11,
+    heart_particle=12,
+    angry_particle=13,
+    happy_particle=14,
+    magic_particle=15,
+    shaking=16,
+    firework=17
 )
 
 window_types = Enum(
@@ -125,6 +195,10 @@ window_types = Enum(
     dispenser=3,
     enchatment_table=4,
     brewing_stand=5,
+    npc_trade=6,
+    beacon=7,
+    anvil=8,
+    hopper=9,
 )
 
 game_states = Enum(
@@ -214,9 +288,9 @@ class MetadataAdapter(Adapter):
         if c.data:
             c.data[-1].peeked = 127
         else:
-            c.data.append(Container(id=Container(first=0, second=0), value=0,
-                peeked=127))
+            c.data.append(Container(id=Container(first=0, second=0), value=0, peeked=127))
         return c
+
 # Metadata inner container.
 metadata_switch = {
     0: UBInt8("value"),
@@ -224,20 +298,13 @@ metadata_switch = {
     2: UBInt32("value"),
     3: BFloat32("value"),
     4: AlphaString("value"),
-    5: Struct("slot",
-        UBInt16("primary"),
-        UBInt8("count"),
-        UBInt16("secondary"),
-    ),
-    6: Struct("coords",
-        UBInt32("x"),
-        UBInt32("y"),
-        UBInt32("z"),
-    ),
+    5: slot,
+    6: Struct("coords", UBInt32("x"), UBInt32("y"), UBInt32("z")),
 }
 # Possible effects.
 # XXX these names aren't really canonized yet
-effect = Enum(UBInt8("effect"),
+effect = Enum(
+    UBInt8("effect"),
     move_fast=1,
     move_slow=2,
     dig_fast=3,
